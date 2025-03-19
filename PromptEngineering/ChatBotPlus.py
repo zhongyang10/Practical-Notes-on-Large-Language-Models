@@ -13,7 +13,7 @@ class ChatBot:
         self.messages = []
         if self.system:
             self.messages.append({"role": "system", "content": system})
-            
+
     def __call__(self, message):
         self.messages.append({"role": "user", "content": message})
         result = self.execute()
@@ -21,7 +21,7 @@ class ChatBot:
         return result
     
     def execute(self):
-        client = OpenAI(api_key='sk-ebc996d7de55448a856dd4a3fb3ccfc4',base_url='https://api.deepseek.com')
+        client = OpenAI(api_key='',base_url='https://api.deepseek.com')
         completion = client.chat.completions.create(model="deepseek-chat", messages=self.messages)
         return completion.choices[0].message.content
     
