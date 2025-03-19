@@ -10,16 +10,15 @@ class Client:
 
     def __call__(self, message):
         self.messages.append({'role':'user','content':message})
-        response = self.execute1()
+        response = self.execute()
         self.messages.append({'role':'assistant','content':response})
         return response
     
-    def execute1(self):
+    def execute(self):
         client = OpenAI(api_key='',base_url='https://api.deepseek.com')
         result = client.chat.completions.create(
             model='deepseek-chat',
-            messages=self.messages,
-            response_format=QAPairList
+            messages=self.messages
         )
         return result.choices[0].message.content
 
