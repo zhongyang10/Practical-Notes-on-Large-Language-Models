@@ -1,0 +1,10 @@
+{
+  "DimQ":64,
+  "DimK":64,
+  "DimV":64,
+  "DimeEmb":10,
+  "NumHeads":8,
+  "BatchSize":3,
+  "Channels":2048,
+  "NumLayers":6
+}
