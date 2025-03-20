@@ -1,38 +1,80 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import yaml
 
 
-class ConfigReader:
-    def __init__(self, config_path):
-        try:
-            with open(config_path, 'r', encoding='utf-8') as file:
-                config = yaml.safe_load(file)
-                if not isinstance(config, dict):
-                    raise ValueError("配置文件解析结果不是字典类型，请检查 YAML 文件格式。")
-                self.DimQ = config.get('DimQ')
-                self.DimK = config.get('DimK')
-                self.DimV = config.get('DimV')
-                self.DimeEmb = config.get('DimeEmb')
-                self.NumHeads = config.get('NumHeads')
-                self.BatchSize = config.get('BatchSize')
-                self.Channels = config.get('Channels')
-                self.NumLayers = config.get('NumLayers')
-        except FileNotFoundError:
-            print(f"错误：未找到配置文件 {config_path}。")
-        except yaml.YAMLError as e:
-            print(f"错误：无法解析 YAML 配置文件，错误信息：{e}。")
-        except ValueError as e:
-            print(e)
-
-
-class ScalDotProductAttention(nn.Module):
+class ScaledDotProductAttention(nn.Module):
     def __init__(self):
-        super(ScalDotProductAttention,self).__init__()
-    def forward(self,Q,K,V,mask):
-        #计算注意力分数并进行缩放
-        pass
+        super(ScaledDotProductAttention, self).__init__()
 
-        
+    def forward(self, query, key, value, mask=None):
+        d_k = query.size(-1)
+        scores = torch.matmul(query, key.transpose(-2, -1)) / np.sqrt(d_k)
 
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, -1e9)
+
+        attn_weights = torch.softmax(scores, dim=-1)
+        output = torch.matmul(attn_weights, value)
+        return output, attn_weights
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super(MultiHeadAttention, self).__init__()
+        assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.d_k = d_model // num_heads
+
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.norm_layer = nn.LayerNorm(d_model)
+
+    def forward(self, query, key, value, mask=None):
+        batch_size = query.size(0)
+        residual = query
+
+        # 线性变换
+        Q = self.W_q(query)
+        K = self.W_k(key)
+        V = self.W_v(value)
+
+        # 分割头
+        Q = Q.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        K = K.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        V = V.view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+
+        if mask is not None:
+            mask = mask.unsqueeze(1).repeat(1, self.num_heads, 1, 1)
+
+        # 缩放点积注意力
+        output, attn_weights = ScaledDotProductAttention()(Q, K, V, mask)
+
+        # 合并头
+        output = output.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+
+        # 输出线性变换
+        # output = self.norm_layer(output + residual)
+
+        return output, attn_weights
+
+
+# 测试代码
+if __name__ == "__main__":
+    d_model = 6
+    num_heads = 2
+    batch_size = 32
+    seq_len = 10
+
+    query = torch.randn(batch_size, seq_len, d_model)
+    key = torch.randn(batch_size, seq_len, d_model)
+    value = torch.randn(batch_size, seq_len, d_model)
+    mask = torch.ones(batch_size, 1, seq_len)
+
+    multihead_attn = MultiHeadAttention(d_model, num_heads)
+    output, attn_weights = multihead_attn(query, key, value, mask)
+
+    print("Output shape:", output.size())  
