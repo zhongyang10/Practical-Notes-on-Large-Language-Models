@@ -266,7 +266,7 @@ class Client:
 
 
 class Sig(dspy.Signature):
-    """从多个维度去分析问题给出答案"""
+    """结合输入信息以及你自己所掌握的信息，从多个维度去分析问题给出答案"""
     def __init__(self):
         super().__init__()
     question: str = dspy.InputField()
