@@ -1,0 +1,14 @@
+{
+    "api_key": "",
+    "query": "最近中东局势怎么样？",
+    "serper_api_url": "https://google.serper.dev/search",
+    "search_params": {
+        "gl": "cn",
+        "hl": "zh-cn",
+        "num": 3
+    },
+    "model_name": "openai/deepseek-chat",
+    "model_api_key": "sk-",
+    "model_api_base": "https://api.deepseek.com",
+    "system_prompt": "文本主要信息提取专家"
+}
