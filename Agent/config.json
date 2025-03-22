@@ -1,5 +1,5 @@
 {
-    "api_key": "",
+    "api_key": "cb1f6924b3242b0ebe8e1b60d21005f9a370ffef",
     "query": "最近中东局势怎么样？",
     "serper_api_url": "https://google.serper.dev/search",
     "search_params": {
@@ -8,7 +8,7 @@
         "num": 3
     },
     "model_name": "openai/deepseek-chat",
-    "model_api_key": "sk-",
+    "model_api_key": "sk-ebc996d7de55448a856dd4a3fb3ccfc4",
     "model_api_base": "https://api.deepseek.com",
-    "system_prompt": "文本主要信息提取专家"
+    "system_prompt": "你是一名有50年经验的文本主要信息提取专家。"
 }

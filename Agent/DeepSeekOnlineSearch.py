@@ -266,7 +266,7 @@ class Client:
 
 
 class Sig(dspy.Signature):
-    """结合输入信息以及你自己所掌握的信息，从多个维度去分析问题给出答案"""
+    """结合输入信息，从多个维度去分析问题给出答案"""
     def __init__(self):
         super().__init__()
     question: str = dspy.InputField()
@@ -301,7 +301,7 @@ if __name__ == "__main__":
         model = Client(system_prompt, model_name, model_api_key, model_api_base)
 
         while True:
-            query = input("请输入需要查询的信息（输入“退出”可退出对话）：")
+            query = input("输入（输入“退出”可退出对话）：")
             if query == "退出":
                 break
             processor = SearchResultProcessor(api_key, query, search_params)
