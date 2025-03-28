@@ -42,13 +42,15 @@ class SearchResultProcessor:
             print("编码错误: 无法对输入字符串进行 UTF-8 编码。")
             return None
 
-    def fetch_search_results(self, api_url):
+    def fetch_search_results(self, api_url, query):
         """
         发起 GET 请求到 Serper API 并获取搜索结果。
 
+        :param query: 本次搜索的具体查询内容
         :return: 包含搜索结果的列表
         """
         try:
+            self.params['q'] = query
             api_result = requests.get(api_url, params=self.params)
             api_result.raise_for_status()
             search_data = api_result.json()
@@ -110,7 +112,7 @@ class SearchResultProcessor:
                 # 对于每个文档，计算查询与文档内容的相似度
                 x.metadata["score"] = normal.similarity(self.query, x.page_content)
             documents.sort(key=lambda x: x.metadata["score"], reverse=True)
-            return documents[:2]
+            return documents[:3]
         except Exception as e:
             print(f"相似度计算错误: {e}")
             return []
@@ -132,8 +134,12 @@ class SearchResultProcessor:
                 html_response.append(response)
             except requests.RequestException as e:
                 print(f"请求错误: 无法获取 {url} 的内容。错误信息: {e}")
+                html_response.append(None)
         markdown_response = []
         for html in html_response:
+            if html is None:
+                markdown_response.append(None)
+                continue
             try:
                 converter = HTML2Text()
                 converter.ignore_links = True
@@ -144,10 +150,12 @@ class SearchResultProcessor:
                 markdown_response.append(markdown)
             except Exception as e:
                 print(f"HTML 转 Markdown 错误: {e}")
+                markdown_response.append(None)
         combined_list = list(zip(url_list, markdown_response))
         content_maps = {}
         for url, content in combined_list:
-            content_maps[url] = content
+            if content is not None:
+                content_maps[url] = content
         return content_maps
 
     def clean_text(self, text):
@@ -193,8 +201,15 @@ class SearchResultProcessor:
 
         :return: 处理后的 Document 对象列表
         """
-        results = self.fetch_search_results(api_url)
-        documents = self.create_documents(results)
+        all_results = []
+        if isinstance(self.query, list):
+            for query in self.query:
+                results = self.fetch_search_results(api_url, query)
+                all_results.extend(results)
+        else:
+            all_results = self.fetch_search_results(api_url, self.query)
+
+        documents = self.create_documents(all_results)
         top_documents = self.calculate_similarity_scores(documents)
         content_maps = self.fetch_html_content(top_documents)
         updated_documents = self.update_documents_with_content(top_documents, content_maps)
@@ -241,7 +256,7 @@ class Client:
             if strategy == "MultiChainComparison":
                 classify = dspy.MultiChainComparison([self.chain1, self.chain2])
             elif strategy == "ReAct":
-                classify = dspy.ReAct(tools=[])
+                classify = dspy.ReAct(tools=tools)
             else:
                 classify = self.strategyMap[strategy]
             response = classify(question=self.messages)
@@ -277,9 +292,14 @@ class Sig2(dspy.Signature):
     """从多个维度去分析问题给出答案"""
     def __init__(self):
         super().__init__()
-
     question: list[str] = dspy.InputField(desc="输入的文本，你需要将该文本的主要信息提取出来")
     answer: str = dspy.OutputField(desc="这是你根据question提取的主要信息，用中文回答，最多500字")
+
+def InformationSearch():
+    pass
+
+
+tools = []
 
 
 if __name__ == "__main__":
@@ -304,10 +324,22 @@ if __name__ == "__main__":
             query = input("输入（输入“退出”可退出对话）：")
             if query == "退出":
                 break
-            processor = SearchResultProcessor(api_key, query, search_params)
-            processed_documents = processor.process(serper_api_url)
-            all_page_content = " ".join([doc.page_content for doc in processed_documents])
-            cleaned_all_page_content = processor.clean_text(all_page_content)
-            response = model(str(cleaned_all_page_content) + query, 'ChainOfThought')
-            print(response)
+
+            # 让 DeepSeek 分析需要查询的信息
+            analysis_prompt = f"请分析以下问题需要查询哪些信息来回答：{query}"
+            search_query = model(analysis_prompt, 'ChainOfThought')
+            print(search_query)
+
+            if search_query:
+                processor = SearchResultProcessor(api_key, search_query, search_params)
+                processed_documents = processor.process(serper_api_url)
+                all_page_content = " ".join([doc.page_content for doc in processed_documents])
+                cleaned_all_page_content = processor.clean_text(all_page_content)
+
+                # 结合搜索结果和用户输入再次让 DeepSeek 回答
+                combined_prompt = f"以下是搜索到的相关信息：{cleaned_all_page_content}。请根据这些信息回答问题：{query}"
+                response = model(combined_prompt, 'ChainOfThought')
+                print(response)
+            else:
+                print("无法分析出需要查询的信息。")
     

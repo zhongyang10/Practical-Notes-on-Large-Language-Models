@@ -7,8 +7,8 @@
         "hl": "zh-cn",
         "num": 3
     },
-    "model_name": "openai/deepseek-chat",
+    "model_name": "deepseek-chat",
     "model_api_key": "sk-ebc996d7de55448a856dd4a3fb3ccfc4",
     "model_api_base": "https://api.deepseek.com",
-    "system_prompt": "你是一名有50年经验的文本主要信息提取专家。"
+    "system_prompt": "你是我的专属人工智能助手。"
 }

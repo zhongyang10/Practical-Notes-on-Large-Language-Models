@@ -1,0 +1,6 @@
+{
+    "model_name": "deepseek-chat",
+    "model_api_key": "",
+    "model_api_base": "https://api.deepseek.com",
+    "system_prompt": "你是我的专属人工智能助手。"
+}
